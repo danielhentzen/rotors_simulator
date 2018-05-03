@@ -555,7 +555,8 @@
     params="namespace xyz_offset wind_direction wind_force_mean
       wind_gust_direction wind_gust_duration wind_gust_start wind_gust_frequency
       wind_gust_force_mean wind_speed_mean use_custom_static_wind_field 
-      custom_wind_field_path drag_coefficient lift_coefficient wind_gust_velocity alpha_max ">
+      custom_wind_field_path drag_coefficient lift_coefficient wind_gust_velocity alpha_max
+      n_rotors arm_length ">
     <gazebo>
       <plugin filename="librotors_gazebo_wind_plugin.so" name="wind_plugin">
         <frameId>world</frameId>
@@ -574,8 +575,10 @@
         <customWindFieldPath>${custom_wind_field_path}</customWindFieldPath> <!-- from ~/.ros -->
         <dragCoefficient>${drag_coefficient}</dragCoefficient> <!-- ? -->
         <liftCoefficient>${lift_coefficient}</liftCoefficient> <!-- ? -->
+        <armLength>${arm_length}</armLength> <!-- ? -->
         <windGustVelocity>${wind_gust_velocity}</windGustVelocity> <!-- m/s -->
         <alphaMax>${alpha_max}</alphaMax> <!-- deg -->
+        <nRotors>${n_rotors}</nRotors> <!-- - -->
       </plugin>
     </gazebo>
   </xacro:macro>

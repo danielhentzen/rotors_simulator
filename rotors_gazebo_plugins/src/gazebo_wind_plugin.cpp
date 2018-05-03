@@ -103,9 +103,11 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
                         wind_gust_force_variance_);
     getSdfParam<float>(_sdf, "dragCoefficient", c_DA_, c_DA_);
     getSdfParam<float>(_sdf, "liftCoefficient", c_LA_, c_LA_);
+    getSdfParam<float>(_sdf, "armLength", arm_length_, arm_length_);
     getSdfParam<double>(_sdf, "windGustVelocity", wind_gust_velocity_,
-                        wind_gust_force_mean_);
+                        wind_gust_velocity_);
     getSdfParam<int>(_sdf, "alphaMax", alpha_max_, alpha_max_);
+    getSdfParam<int>(_sdf, "nRotors", n_rotors_, n_rotors_);
     getSdfParam<math::Vector3>(_sdf, "windGustDirection", wind_gust_direction_,
                         wind_gust_direction_);
 
@@ -164,17 +166,29 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     math::Vector3 wind_gust(0.0, 0.0, 0.0);
 
     // Calculate the wind gust force.
+    math::Vector3* rotor_forces;
+    rotor_forces = new math::Vector3[n_rotors_];
+    
+    for (int i=0; i<n_rotors_; i++) {
+      rotor_forces[i] = ComputeRotorForce();
+    }
+
+    //math::Vector3 force_resultant = ComputeResultantForce(rotor_forces);
+    math::Vector3 force_resultant =  math::Vector3(5.0,5.0,5.0);
+    std::cout << force_resultant;
+    math::Vector3 moment_resultant = ComputeResultantMoment(rotor_forces);
+    std::cout << moment_resultant;
+
+
     if (now - reference_time_ > wind_gust_frequency_){
-      std::cout << "started";
       wind_gust_start_ = now;
       wind_gust_end_ = now + wind_gust_duration_;
       reference_time_ = now;
     }
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
-      double wind_gust_strength = wind_gust_force_mean_;
-      wind_gust = wind_gust_strength * wind_gust_direction_;
       // Apply a force from the wind gust to the link.
-      link_->AddForceAtRelativePosition(wind_gust, xyz_offset_);
+      link_->AddForceAtRelativePosition(force_resultant, xyz_offset_);
+      //link_->AddTorque(moment_resultant);
     }
 
     wrench_stamped_msg_.mutable_header()->set_frame_id(frame_id_);
@@ -182,16 +196,16 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     wrench_stamped_msg_.mutable_header()->mutable_stamp()->set_nsec(now.nsec);
 
     wrench_stamped_msg_.mutable_wrench()->mutable_force()->set_x(wind.x +
-                                                                 wind_gust.x);
+                                                                 force_resultant.x);
     wrench_stamped_msg_.mutable_wrench()->mutable_force()->set_y(wind.y +
-                                                                 wind_gust.y);
+                                                                 force_resultant.y);
     wrench_stamped_msg_.mutable_wrench()->mutable_force()->set_z(wind.z +
-                                                                 wind_gust.z);
+                                                                 force_resultant.z);
 
     // No torque due to wind, set x,y and z to 0.
-    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_x(0);
-    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_y(0);
-    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_z(0);
+    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_x(moment_resultant.x);
+    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_y(moment_resultant.y);
+    wrench_stamped_msg_.mutable_wrench()->mutable_torque()->set_z(moment_resultant.z);
 
     wind_force_pub_->Publish(wrench_stamped_msg_);
 
@@ -462,7 +476,7 @@ math::Vector3 GazeboWindPlugin::TrilinearInterpolation(
   return value;
 }
 
-math::Vector3 GazeboWindPlugin::ComputeForce() {
+math::Vector3 GazeboWindPlugin::ComputeRotorForce() {
   srand(time(0));
 
   math::Vector3 e_z;
@@ -494,6 +508,37 @@ math::Vector3 GazeboWindPlugin::ComputeForce() {
 
   return rotor_force;
 }
+
+math::Vector3 GazeboWindPlugin::ComputeResultantForce(
+  math::Vector3* rotor_forces) {
+
+  math::Vector3 force_resultant = math::Vector3(3,3,3);
+
+  //for (int i=0; i<n_rotors_; i++) {
+  //  force_resultant = force_resultant + rotor_forces[i];
+  //}
+
+  return force_resultant;
+}
+
+math::Vector3 GazeboWindPlugin::ComputeResultantMoment(
+  math::Vector3* rotor_forces) {
+
+  math::Vector3 moment_resultant = math::Vector3(0,0,0);
+
+  math::Vector3 r_1 = math::Vector3(arm_length_,0,0);
+  math::Vector3 r_2 = math::Vector3(0,arm_length_,0);
+  math::Vector3 r_3 = math::Vector3(-arm_length_,0,0);
+  math::Vector3 r_4 = math::Vector3(0,-arm_length_,0);
+
+  moment_resultant = r_1.Cross(*(rotor_forces+0))
+                     + r_2.Cross(*(rotor_forces+1))
+                     + r_3.Cross(*(rotor_forces+2))
+                     + r_4.Cross(*(rotor_forces+3));
+
+  return moment_resultant;
+}
+
 
 GZ_REGISTER_MODEL_PLUGIN(GazeboWindPlugin);
 

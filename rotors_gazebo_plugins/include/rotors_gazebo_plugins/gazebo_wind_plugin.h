@@ -50,7 +50,7 @@ static constexpr double kDefaultWindGustForceVariance = 0.0;
 
 static constexpr double kDefaultWindGustStart = 10.0;
 static constexpr double kDefaultWindGustDuration = 0.0;
-static constexpr int kDefaultWindGustFrequency = 0.0;
+static constexpr int kDefaultWindGustFrequency = 0;
 
 static constexpr double kDefaultWindSpeedMean = 0.0;
 static constexpr double kDefaultWindSpeedVariance = 0.0;
@@ -59,6 +59,8 @@ static const math::Vector3 kDefaultWindDirection = math::Vector3(1, 0, 0);
 static const math::Vector3 kDefaultWindGustDirection = math::Vector3(0, 1, 0);
 
 static constexpr bool kDefaultUseCustomStaticWindField = false;
+static constexpr int kDefaultNRotors = 4;
+
 
 
 
@@ -85,6 +87,7 @@ class GazeboWindPlugin : public ModelPlugin {
         link_name_(kDefaultLinkName),
         node_handle_(nullptr),
         pubs_and_subs_created_(false) {}
+        //n_rotors_(kDefaultNRotors) {}
 
   virtual ~GazeboWindPlugin();
 
@@ -151,6 +154,7 @@ class GazeboWindPlugin : public ModelPlugin {
   float c_LA_;
   float arm_length_;
   int alpha_max_;
+  static int n_rotors_;
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;
@@ -203,7 +207,12 @@ class GazeboWindPlugin : public ModelPlugin {
   ///                    y-coordinate of the last two intermediate points (12 and 13).
   math::Vector3 TrilinearInterpolation(math::Vector3 link_position, math::Vector3* values, double* points) const;
 
-  math::Vector3 ComputeForce();
+  math::Vector3 ComputeRotorForce();
+
+  math::Vector3 ComputeResultantForce(math::Vector3* rotor_forces);
+
+  math::Vector3 ComputeResultantMoment(math::Vector3* rotor_forces);
+
   
   gazebo::transport::PublisherPtr wind_force_pub_;
   gazebo::transport::PublisherPtr wind_speed_pub_;
