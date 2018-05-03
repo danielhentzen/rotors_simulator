@@ -46,6 +46,7 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   double wind_gust_start = kDefaultWindGustStart;
   double wind_gust_duration = kDefaultWindGustDuration;
   int wind_gust_frequency = kDefaultWindGustFrequency;
+  common::Time reference_time = 0.0;
 
   //==============================================//
   //========== READ IN PARAMS FROM SDF ===========//
@@ -106,8 +107,10 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     wind_direction_.Normalize();
     wind_gust_direction_.Normalize();
     wind_gust_start_ = common::Time(wind_gust_start);
+    wind_gust_duration_ = wind_gust_duration;
     wind_gust_end_ = common::Time(wind_gust_start + wind_gust_duration);
     wind_gust_frequency_ = wind_gust_frequency;
+    reference_time_ = common::Time(reference_time);
   } else {
     gzdbg << "[gazebo_wind_plugin] Using custom wind field from text file.\n";
     // Get the wind field text file path, read it and save data.
@@ -154,10 +157,13 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     link_->AddForceAtRelativePosition(wind, xyz_offset_);
 
     math::Vector3 wind_gust(0.0, 0.0, 0.0);
+
     // Calculate the wind gust force.
-    if (now_int % wind_gust_frequency_ == 0) {
+    if (now - reference_time_ > wind_gust_frequency_){
+      std::cout << "started";
       wind_gust_start_ = now;
-      wind_gust_end_ = now + 10;
+      wind_gust_end_ = now + wind_gust_duration_;
+      reference_time_ = now;
     }
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
       double wind_gust_strength = wind_gust_force_mean_;

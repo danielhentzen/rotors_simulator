@@ -138,7 +138,10 @@ class GazeboWindPlugin : public ModelPlugin {
 
   common::Time wind_gust_end_;
   common::Time wind_gust_start_;
+  common::Time wind_gust_duration_;
+  common::Time reference_time_;
   int wind_gust_frequency_;
+
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;
