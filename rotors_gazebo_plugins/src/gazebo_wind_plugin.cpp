@@ -101,6 +101,11 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
                         wind_gust_force_mean_);
     getSdfParam<double>(_sdf, "windGustForceVariance", wind_gust_force_variance_,
                         wind_gust_force_variance_);
+    getSdfParam<float>(_sdf, "dragCoefficient", c_DA_, c_DA_);
+    getSdfParam<float>(_sdf, "liftCoefficient", c_LA_, c_LA_);
+    getSdfParam<double>(_sdf, "windGustVelocity", wind_gust_velocity_,
+                        wind_gust_force_mean_);
+    getSdfParam<int>(_sdf, "alphaMax", alpha_max_, alpha_max_);
     getSdfParam<math::Vector3>(_sdf, "windGustDirection", wind_gust_direction_,
                         wind_gust_direction_);
 
@@ -455,6 +460,39 @@ math::Vector3 GazeboWindPlugin::TrilinearInterpolation(
   math::Vector3 value = BilinearInterpolation(
     &(position[0]), intermediate_values, &(points[8]));
   return value;
+}
+
+math::Vector3 GazeboWindPlugin::ComputeForce() {
+  srand(time(0));
+
+  math::Vector3 e_z;
+  e_z.x = 0;
+  e_z.y = 0;
+  e_z.z = 1;
+
+  math::Vector3 drag_force = 0.5 * c_DA_ * 1.225 * wind_gust_velocity_* wind_gust_velocity_
+                                                                   * wind_gust_direction_;
+  math::Vector3 lift_force = 0.5 * c_LA_ * 1.225 * wind_gust_velocity_ * wind_gust_velocity_
+                                                                   * e_z;
+
+  math::Vector3 mean_force = drag_force + lift_force;
+  math::Vector3 mean_rotor_force = mean_force / 4;
+
+  int alpha = (rand() % alpha_max_) + 0;
+
+  math::Matrix3 R_x = math::Matrix3(1, 0,          0,
+                       0, cos(alpha), -sin(alpha),
+                       0, sin(alpha), cos(alpha)
+                       );
+
+  math::Matrix3 R_y = math::Matrix3(cos(alpha), 0,  sin(alpha),
+                       0,          1,  0,
+                       -sin(alpha), 0, cos(alpha)
+                       );
+
+  math::Vector3 rotor_force = R_x * R_y * mean_rotor_force; 
+
+  return rotor_force;
 }
 
 GZ_REGISTER_MODEL_PLUGIN(GazeboWindPlugin);

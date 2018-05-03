@@ -111,6 +111,8 @@ class GazeboWindPlugin : public ModelPlugin {
   ///           has loaded and listening to ConnectGazeboToRosTopic and ConnectRosToGazeboTopic messages).
   void CreatePubsAndSubs();
 
+
+
   /// \brief    Pointer to the update event connection.
   event::ConnectionPtr update_connection_;
 
@@ -135,6 +137,7 @@ class GazeboWindPlugin : public ModelPlugin {
   math::Vector3 xyz_offset_;
   math::Vector3 wind_direction_;
   math::Vector3 wind_gust_direction_;
+  double wind_gust_velocity_;
 
   common::Time wind_gust_end_;
   common::Time wind_gust_start_;
@@ -142,6 +145,12 @@ class GazeboWindPlugin : public ModelPlugin {
   common::Time reference_time_;
   int wind_gust_frequency_;
 
+
+  /// \brief    Variables for custom force & torque computation
+  float c_DA_;
+  float c_LA_;
+  float arm_length_;
+  int alpha_max_;
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;
@@ -193,6 +202,8 @@ class GazeboWindPlugin : public ModelPlugin {
   ///                    of the four intermediate points (8, 9, 10 and 11), and the 
   ///                    y-coordinate of the last two intermediate points (12 and 13).
   math::Vector3 TrilinearInterpolation(math::Vector3 link_position, math::Vector3* values, double* points) const;
+
+  math::Vector3 ComputeForce();
   
   gazebo::transport::PublisherPtr wind_force_pub_;
   gazebo::transport::PublisherPtr wind_speed_pub_;
