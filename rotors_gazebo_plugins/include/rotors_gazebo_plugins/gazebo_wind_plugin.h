@@ -50,6 +50,7 @@ static constexpr double kDefaultWindGustForceVariance = 0.0;
 
 static constexpr double kDefaultWindGustStart = 10.0;
 static constexpr double kDefaultWindGustDuration = 0.0;
+static constexpr int kDefaultWindGustFrequency = 0.0;
 
 static constexpr double kDefaultWindSpeedMean = 0.0;
 static constexpr double kDefaultWindSpeedVariance = 0.0;
@@ -137,6 +138,7 @@ class GazeboWindPlugin : public ModelPlugin {
 
   common::Time wind_gust_end_;
   common::Time wind_gust_start_;
+  int wind_gust_frequency_;
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;

@@ -23,6 +23,8 @@
 
 #include <fstream>
 #include <math.h>
+#include <cmath>
+#include <cstdlib>
 
 #include "ConnectGazeboToRosTopic.pb.h"
 
@@ -43,6 +45,7 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   double wind_gust_start = kDefaultWindGustStart;
   double wind_gust_duration = kDefaultWindGustDuration;
+  int wind_gust_frequency = kDefaultWindGustFrequency;
 
   //==============================================//
   //========== READ IN PARAMS FROM SDF ===========//
@@ -91,6 +94,8 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     getSdfParam<double>(_sdf, "windGustStart", wind_gust_start, wind_gust_start);
     getSdfParam<double>(_sdf, "windGustDuration", wind_gust_duration,
                         wind_gust_duration);
+    getSdfParam<int>(_sdf, "windGustFrequency", wind_gust_frequency,
+                        wind_gust_frequency);
     getSdfParam<double>(_sdf, "windGustForceMean", wind_gust_force_mean_,
                         wind_gust_force_mean_);
     getSdfParam<double>(_sdf, "windGustForceVariance", wind_gust_force_variance_,
@@ -102,6 +107,7 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     wind_gust_direction_.Normalize();
     wind_gust_start_ = common::Time(wind_gust_start);
     wind_gust_end_ = common::Time(wind_gust_start + wind_gust_duration);
+    wind_gust_frequency_ = wind_gust_frequency;
   } else {
     gzdbg << "[gazebo_wind_plugin] Using custom wind field from text file.\n";
     // Get the wind field text file path, read it and save data.
@@ -135,6 +141,7 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
 
   // Get the current simulation time.
   common::Time now = world_->GetSimTime();
+  int now_int = floor(now.sec);
   
   math::Vector3 wind_velocity(0.0, 0.0, 0.0);
 
@@ -148,6 +155,10 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
 
     math::Vector3 wind_gust(0.0, 0.0, 0.0);
     // Calculate the wind gust force.
+    if (now_int % wind_gust_frequency_ == 0) {
+      wind_gust_start_ = now;
+      wind_gust_end_ = now + 10;
+    }
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
       double wind_gust_strength = wind_gust_force_mean_;
       wind_gust = wind_gust_strength * wind_gust_direction_;
