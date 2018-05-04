@@ -139,7 +139,7 @@ class GazeboWindPlugin : public ModelPlugin {
   math::Vector3 xyz_offset_;
   math::Vector3 wind_direction_;
   math::Vector3 wind_gust_direction_;
-  double wind_gust_velocity_;
+  float wind_gust_magnitude_;
 
   common::Time wind_gust_end_;
   common::Time wind_gust_start_;
@@ -206,11 +206,13 @@ class GazeboWindPlugin : public ModelPlugin {
   ///                    y-coordinate of the last two intermediate points (12 and 13).
   math::Vector3 TrilinearInterpolation(math::Vector3 link_position, math::Vector3* values, double* points) const;
 
-  math::Vector3 ComputeRotorForce();
+  math::Vector3 ComputeRotorForce(double wind_gust_velocity);
 
   math::Vector3 ComputeResultantForce(math::Vector3* rotor_forces);
 
   math::Vector3 ComputeResultantMoment(math::Vector3* rotor_forces);
+
+  double ComputeGustVelocity(common::Time t_0, common::Time gust_duration, float magnitude);
 
   
   gazebo::transport::PublisherPtr wind_force_pub_;
