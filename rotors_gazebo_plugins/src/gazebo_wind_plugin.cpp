@@ -86,6 +86,7 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   // Check if a custom static wind field should be used.
   getSdfParam<bool>(_sdf, "useCustomStaticWindField", use_custom_static_wind_field_,
                       use_custom_static_wind_field_);
+
   if (!use_custom_static_wind_field_) {
     gzdbg << "[gazebo_wind_plugin] Using user-defined constant wind field and gusts.\n";
     // Get the wind params from SDF.
@@ -178,26 +179,34 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
       wind_gust_start_ = now;
       wind_gust_end_ = now + wind_gust_duration_;
       reference_time_ = now;
+
+      // Generate random wind direction
+      wind_gust_direction_.x = rand();
+      wind_gust_direction_.y = rand();
+      wind_gust_direction_.z = rand();
+
+      wind_gust_direction_.Normalize();
+
+      // Generate four random tilt angles to generate a random body torque disturbance
+      srand(time(0));
+
+      alpha_ = new double[n_rotors_];
+
+      for (int i=0; i<n_rotors_;i++){
+        int alpha_deg = (rand() % alpha_max_) + 0;
+        alpha_[i] = alpha_deg * PI / 180;
+      }
     }
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
-      srand(time(0));
+      
       double wind_gust_velocity = ComputeGustVelocity(wind_gust_start_, wind_gust_duration_, 
                                                        wind_gust_magnitude_);
 
-      for (int i=0; i<n_rotors_; i++) {
-        rotor_forces[i] = ComputeRotorForce(wind_gust_velocity);
-      }
+      rotor_forces = ComputeRotorForces(wind_gust_velocity, alpha_);
 
-      // std::cout << "F_1: " << rotor_forces[0] << std::endl;
-      // std::cout << "F_2: " << rotor_forces[1] << std::endl;
-      // std::cout << "F_3: " << rotor_forces[2] << std::endl;
-      // std::cout << "F_4: " << rotor_forces[3] << std::endl;
-
-      //math::Vector3 force_resultant = ComputeResultantForce(rotor_forces);
       force_resultant =  ComputeResultantForce(rotor_forces);
-      //std::cout << force_resultant;
+      
       moment_resultant = ComputeResultantMoment(rotor_forces);
-      //std::cout << moment_resultant;
 
       // Apply a force from the wind gust to the link.
       link_->AddForceAtRelativePosition(force_resultant, xyz_offset_);
@@ -489,8 +498,12 @@ math::Vector3 GazeboWindPlugin::TrilinearInterpolation(
   return value;
 }
 
-math::Vector3 GazeboWindPlugin::ComputeRotorForce(double wind_gust_velocity) {
+math::Vector3* GazeboWindPlugin::ComputeRotorForces(
+  double wind_gust_velocity, double* alpha) {
   //srand(time(0));
+
+  math::Vector3* rotor_forces;
+  rotor_forces = new math::Vector3[n_rotors_];
 
   math::Vector3 e_z;
   e_z.x = 0;
@@ -505,23 +518,21 @@ math::Vector3 GazeboWindPlugin::ComputeRotorForce(double wind_gust_velocity) {
   math::Vector3 mean_force = drag_force + lift_force;
   math::Vector3 mean_rotor_force = mean_force / 4;
 
-  int alpha_deg = (rand() % alpha_max_) + 0;
-  //std::cout << alpha << std::endl;
-  float alpha = alpha_deg * PI/180.0;
-
-  math::Matrix3 R_x = math::Matrix3(1, 0,          0,
-                       0, cos(alpha), -sin(alpha),
-                       0, sin(alpha), cos(alpha)
+  for (int i=0; i<n_rotors_; i++) {
+    math::Matrix3 R_x = math::Matrix3(1, 0,          0,
+                       0, cos(alpha[i]), -sin(alpha[i]),
+                       0, sin(alpha[i]), cos(alpha[i])
                        );
 
-  math::Matrix3 R_y = math::Matrix3(cos(alpha), 0,  sin(alpha),
-                       0,          1,  0,
-                       -sin(alpha), 0, cos(alpha)
-                       );
+    math::Matrix3 R_y = math::Matrix3(cos(alpha[i]), 0,  sin(alpha[i]),
+                         0,          1,  0,
+                         -sin(alpha[i]), 0, cos(alpha[i])
+                         );
+    rotor_forces[i] = R_x * R_y * mean_rotor_force; 
+  
+  } 
 
-  math::Vector3 rotor_force = R_x * R_y * mean_rotor_force; 
-
-  return rotor_force;
+  return rotor_forces;
 }
 
 math::Vector3 GazeboWindPlugin::ComputeResultantForce(
@@ -559,7 +570,6 @@ double GazeboWindPlugin::ComputeGustVelocity(
   
   common::Time now = world_->GetSimTime();
   double gust_velocity = magnitude/2 * (1-cos(2*PI*(now.Double() - t_0.Double())/gust_duration.Double()));
-  std::cout << "V: " << gust_velocity << std::endl;
   return gust_velocity;
 }
 

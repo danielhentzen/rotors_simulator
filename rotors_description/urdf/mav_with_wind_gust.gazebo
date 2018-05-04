@@ -32,7 +32,7 @@
     wind_gust_direction="1 1 0"
     wind_gust_duration="3"
     wind_gust_start="40"
-    wind_gust_frequency = "15"
+    wind_gust_frequency = "6"
     wind_gust_force_mean="0"
     wind_speed_mean="0"
     use_custom_static_wind_field="false"
@@ -40,7 +40,7 @@
     drag_coefficient="0.01351"
     lift_coefficient="0.00237"
     wind_gust_magnitude="20.0"
-    alpha_max="60"
+    alpha_max="50"
     n_rotors="4"
     arm_length="0.170">
   </xacro:wind_plugin_macro>

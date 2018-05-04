@@ -154,6 +154,7 @@ class GazeboWindPlugin : public ModelPlugin {
   float arm_length_;
   int alpha_max_;
   static const int n_rotors_ = 4;
+  double* alpha_;
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;
@@ -206,7 +207,7 @@ class GazeboWindPlugin : public ModelPlugin {
   ///                    y-coordinate of the last two intermediate points (12 and 13).
   math::Vector3 TrilinearInterpolation(math::Vector3 link_position, math::Vector3* values, double* points) const;
 
-  math::Vector3 ComputeRotorForce(double wind_gust_velocity);
+  math::Vector3* ComputeRotorForces(double wind_gust_velocity, double* alpha);
 
   math::Vector3 ComputeResultantForce(math::Vector3* rotor_forces);
 
