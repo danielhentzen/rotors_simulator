@@ -86,8 +86,7 @@ class GazeboWindPlugin : public ModelPlugin {
         frame_id_(kDefaultFrameId),
         link_name_(kDefaultLinkName),
         node_handle_(nullptr),
-        pubs_and_subs_created_(false) {}
-        //n_rotors_(kDefaultNRotors) {}
+        pubs_and_subs_created_(false){}
 
   virtual ~GazeboWindPlugin();
 
@@ -154,7 +153,7 @@ class GazeboWindPlugin : public ModelPlugin {
   float c_LA_;
   float arm_length_;
   int alpha_max_;
-  static int n_rotors_;
+  static const int n_rotors_ = 4;
 
   /// \brief    Variables for custom wind field generation.
   bool use_custom_static_wind_field_;

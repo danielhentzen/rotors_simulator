@@ -28,6 +28,8 @@
 
 #include "ConnectGazeboToRosTopic.pb.h"
 
+#define PI 3.14159265
+
 namespace gazebo {
 
 GazeboWindPlugin::~GazeboWindPlugin() {
@@ -107,7 +109,7 @@ void GazeboWindPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     getSdfParam<double>(_sdf, "windGustVelocity", wind_gust_velocity_,
                         wind_gust_velocity_);
     getSdfParam<int>(_sdf, "alphaMax", alpha_max_, alpha_max_);
-    getSdfParam<int>(_sdf, "nRotors", n_rotors_, n_rotors_);
+    //getSdfParam<int>(_sdf, "nRotors", n_rotors_, n_rotors_);
     getSdfParam<math::Vector3>(_sdf, "windGustDirection", wind_gust_direction_,
                         wind_gust_direction_);
 
@@ -169,15 +171,21 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     math::Vector3* rotor_forces;
     rotor_forces = new math::Vector3[n_rotors_];
     
+    srand(time(0));
     for (int i=0; i<n_rotors_; i++) {
       rotor_forces[i] = ComputeRotorForce();
     }
 
+    std::cout << "F_1: " << rotor_forces[0] << std::endl;
+    std::cout << "F_2: " << rotor_forces[1] << std::endl;
+    std::cout << "F_3: " << rotor_forces[2] << std::endl;
+    std::cout << "F_4: " << rotor_forces[3] << std::endl;
+
     //math::Vector3 force_resultant = ComputeResultantForce(rotor_forces);
-    math::Vector3 force_resultant =  math::Vector3(5.0,5.0,5.0);
-    std::cout << force_resultant;
+    math::Vector3 force_resultant =  ComputeResultantForce(rotor_forces);
+    //std::cout << force_resultant;
     math::Vector3 moment_resultant = ComputeResultantMoment(rotor_forces);
-    std::cout << moment_resultant;
+    //std::cout << moment_resultant;
 
 
     if (now - reference_time_ > wind_gust_frequency_){
@@ -188,7 +196,7 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
       // Apply a force from the wind gust to the link.
       link_->AddForceAtRelativePosition(force_resultant, xyz_offset_);
-      //link_->AddTorque(moment_resultant);
+      link_->AddTorque(moment_resultant);
     }
 
     wrench_stamped_msg_.mutable_header()->set_frame_id(frame_id_);
@@ -477,7 +485,7 @@ math::Vector3 GazeboWindPlugin::TrilinearInterpolation(
 }
 
 math::Vector3 GazeboWindPlugin::ComputeRotorForce() {
-  srand(time(0));
+  //srand(time(0));
 
   math::Vector3 e_z;
   e_z.x = 0;
@@ -492,12 +500,17 @@ math::Vector3 GazeboWindPlugin::ComputeRotorForce() {
   math::Vector3 mean_force = drag_force + lift_force;
   math::Vector3 mean_rotor_force = mean_force / 4;
 
-  int alpha = (rand() % alpha_max_) + 0;
+  int alpha_deg = (rand() % alpha_max_) + 0;
+  //std::cout << alpha << std::endl;
+  float alpha = alpha_deg * PI/180.0;
+  std::cout << alpha << std::endl;
 
   math::Matrix3 R_x = math::Matrix3(1, 0,          0,
                        0, cos(alpha), -sin(alpha),
                        0, sin(alpha), cos(alpha)
                        );
+
+  std::cout << "R_x: " << R_x << std::endl;
 
   math::Matrix3 R_y = math::Matrix3(cos(alpha), 0,  sin(alpha),
                        0,          1,  0,
@@ -512,11 +525,11 @@ math::Vector3 GazeboWindPlugin::ComputeRotorForce() {
 math::Vector3 GazeboWindPlugin::ComputeResultantForce(
   math::Vector3* rotor_forces) {
 
-  math::Vector3 force_resultant = math::Vector3(3,3,3);
+  math::Vector3 force_resultant = math::Vector3(0,0,0);
 
-  //for (int i=0; i<n_rotors_; i++) {
-  //  force_resultant = force_resultant + rotor_forces[i];
-  //}
+  for (int i=0; i<n_rotors_; i++) {
+    force_resultant = force_resultant + rotor_forces[i];
+  }
 
   return force_resultant;
 }
@@ -530,6 +543,12 @@ math::Vector3 GazeboWindPlugin::ComputeResultantMoment(
   math::Vector3 r_2 = math::Vector3(0,arm_length_,0);
   math::Vector3 r_3 = math::Vector3(-arm_length_,0,0);
   math::Vector3 r_4 = math::Vector3(0,-arm_length_,0);
+  
+  //std::cout << *(rotor_forces) << std::endl;
+  //std::cout << *(rotor_forces+1) << std::endl;
+  //std::cout << *(rotor_forces+2) << std::endl;
+  //std::cout << *(rotor_forces+3) << std::endl;
+
 
   moment_resultant = r_1.Cross(*(rotor_forces+0))
                      + r_2.Cross(*(rotor_forces+1))
