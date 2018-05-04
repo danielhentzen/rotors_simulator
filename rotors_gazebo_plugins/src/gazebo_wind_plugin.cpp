@@ -181,7 +181,7 @@ void GazeboWindPlugin::OnUpdate(const common::UpdateInfo& _info) {
     }
     if (now >= wind_gust_start_ && now < wind_gust_end_) {
       srand(time(0));
-      double wind_gust_velocity = ComputeGustVelocity(reference_time_, wind_gust_duration_, 
+      double wind_gust_velocity = ComputeGustVelocity(wind_gust_start_, wind_gust_duration_, 
                                                        wind_gust_magnitude_);
 
       for (int i=0; i<n_rotors_; i++) {
@@ -558,7 +558,7 @@ double GazeboWindPlugin::ComputeGustVelocity(
   common::Time t_0, common::Time gust_duration, float magnitude) {
   
   common::Time now = world_->GetSimTime();
-  double gust_velocity = magnitude * sin((PI*((double)now.sec - (double)t_0.sec))/((double)gust_duration.sec-(double)t_0.sec));
+  double gust_velocity = magnitude/2 * (1-cos(2*PI*(now.Double() - t_0.Double())/gust_duration.Double()));
   std::cout << "V: " << gust_velocity << std::endl;
   return gust_velocity;
 }
